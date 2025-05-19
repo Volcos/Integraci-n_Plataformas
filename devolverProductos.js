@@ -4,7 +4,7 @@ async function devolverProductos() {
     try {
         db = await getConnection();
         const productos = db.execute(
-            `SELECT nombre, descripcion FROM producto`
+            `SELECT * FROM producto`
         );
         return productos;
     } catch (e) {

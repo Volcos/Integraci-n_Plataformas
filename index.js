@@ -78,10 +78,17 @@ app.get('/devolverStock', async (req,res) => {
   const sucursal = req.body.sucursal;
   const producto = req.body.producto;
 
-  let stock = await devolverStock(sucursal,producto);
-  const validacion = await validarStock(req.body.producto,stock.rows);
+  
 
-  console.log(validacion.resultado);
+  let stock = await devolverStock(sucursal,producto);
+
+  let stock_final = parseInt(stock.rows);
+
+  const validacion = await validarStock(req.body.producto,stock.rows);
+  
+  
+
+  console.log(stock_final);
 
   if (validacion.resultado){
     res.send('El stock actual corresponde a: ' + stock.rows+"\n El stock se encuentra por debajo del stock minimo: "+validacion.stock_min);

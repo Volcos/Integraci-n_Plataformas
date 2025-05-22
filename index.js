@@ -2,12 +2,27 @@ const express = require("express");
 let getConnection = require('./db.js')
 let devolverStock = require('./devolverStock.js')
 const validarStock = require("./stockMinimo.js");
-const devolverProductos = require("./devolverProductos.js");
+const consultarProductos = require("./consultarProductos.js");
 require('dotenv').config();
 
 const app = express();
 
 app.use(express.json());
+
+
+
+/*
+RUTAS
+-----------------------------------
+/agregarStock (body -> sucursal,producto,cantidad)
+
+/rebajarStock (body -> sucursal,producto,cantidad)
+
+/devolverStock (body -> sucursal,producto)
+
+/consultarProductos (no body)
+*/
+
 
 /* 
 ---------------------
@@ -15,9 +30,11 @@ INGRESAR STOCK
 ---------------------   
 */ 
 
-app.put('/agregarStock/:idProducto/:idSucursal', async (req,res) =>{
+app.put('/agregarStock', async (req,res) =>{
     let db;
-    const {cantidad} = req.body
+    const sucursal = req.body.sucursal;
+    const producto = req.body.producto;
+    const cantidad = req.body.cantidad;
     try {
         db = await getConnection();
         const result = await db.execute(`
@@ -26,8 +43,8 @@ app.put('/agregarStock/:idProducto/:idSucursal', async (req,res) =>{
           WHERE id_sucursal = :idSucursal AND id_producto = :idProducto`,
         {
           cantidad: cantidad,
-          idSucursal: parseInt(req.params.idSucursal),
-          idProducto: parseInt(req.params.idProducto) 
+          idSucursal: sucursal,
+          idProducto: producto 
         },
       { autoCommit: true });
       
@@ -45,9 +62,11 @@ REBAJAR STOCK
 ---------------------
 */
 
-app.put('/rebajarStock/:idProducto/:idSucursal', async (req,res) =>{
+app.put('/rebajarStock', async (req,res) =>{
     let db;
-    const {cantidad} = req.body
+    const sucursal = req.body.sucursal;
+    const producto = req.body.producto;
+    const cantidad = req.body.cantidad;
     try {
         db = await getConnection();
         const result = await db.execute(`
@@ -56,8 +75,8 @@ app.put('/rebajarStock/:idProducto/:idSucursal', async (req,res) =>{
           WHERE id_sucursal = :idSucursal AND id_producto = :idProducto`,
         {
           cantidad: cantidad,
-          idSucursal: parseInt(req.params.idSucursal),
-          idProducto: parseInt(req.params.idProducto) 
+          idSucursal: sucursal,
+          idProducto: producto 
         },
       { autoCommit: true });
       
@@ -99,14 +118,29 @@ app.get('/devolverStock', async (req,res) => {
 
 /*
 ---------------------
-CONSULTAR PRODUCTOS
+CONSULTAR TODOS LOS PRODUCTOS
 ---------------------
 */
 
 app.get('/consultarProductos', async (req,res) => {
-  lista_productos = await devolverProductos();
+  lista_productos = await consultarProductos();
+  let lista_response = [];
 
-  res.send(lista_productos.rows);
+  for (let i in lista_productos.rows){
+    const [id, nombre, descripcion, precio_cliente,precio_empresa, stock_total] = lista_productos.rows[i];
+    lista_response.push(
+      {
+      id:id,
+      nombre:nombre,
+      descripcion:descripcion,
+      precio_cliente:precio_cliente,
+      precio_empresa:precio_empresa,
+      stock_total:stock_total
+      }
+    ); 
+  }
+
+  res.json(lista_response);
 })
 
 

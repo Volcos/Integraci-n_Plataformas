@@ -13,7 +13,7 @@ async function validarStock(id, stock) {
         );
         console.log(stock_minimo)
         if (stock < parseInt(stock_minimo.rows)) {
-            return {resultado:true,stock_min:10};
+            return {resultado:true,stock_min:parseInt(stock_minimo.rows)};
         }
         return {resultado:false};
     } catch (e) {

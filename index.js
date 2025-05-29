@@ -1,12 +1,15 @@
 const express = require("express");
-let getConnection = require('./db.js')
-let devolverStock = require('./devolverStock.js')
-const validarStock = require("./stockMinimo.js");
-const consultarProductos = require("./consultarProductos.js");
-const devolverItem = require("./devolverItem.js");
-const devolverCarrito = require("./devolverCarrito.js");
-const agregarCarrito = require("./agregarCarrito.js");
-const rebajarCarrito = require("./rebajarCarrito.js");
+let getConnection = require('./Static/db.js')
+let devolverStock = require('./Static/devolverStock.js')
+const validarStock = require("./Static/stockMinimo.js");
+const consultarProductos = require("./Static/consultarProductos.js");
+const devolverItem = require("./Static/devolverItem.js");
+const devolverProductosCarrito = require("./Static/devolverProductosCarrito.js");
+const agregarCarrito = require("./Static/agregarCarrito.js");
+const rebajarCarrito = require("./Static/rebajarCarrito.js");
+const mostrarCarritos = require("./Static/mostrarCarritos.js");
+const crearCarrito = require("./Static/crearCarrito.js");
+const eliminarCarrito = require("./Static/eliminarCarrito.js");
 require('dotenv').config();
 
 const app = express();
@@ -181,14 +184,73 @@ app.get('/consultarItem', async (req,res) => {
 
 /*
 ---------------------
+MOSTRAR CARRITOS
+---------------------
+*/
+
+app.get('/mostrarCarritos', async (req,res) => {
+  const {id_cliente} = req.body;
+
+  carrito = await mostrarCarritos(id_cliente);
+
+
+  console.log(carrito);
+  
+  res.send(carrito)
+
+});
+
+/*
+---------------------
+CREAR CARRITO
+---------------------
+*/
+
+app.post('/crearCarrito', async (req,res) => {
+  const { id_cliente } = req.body;
+
+  const result = await crearCarrito(id_cliente);
+
+  res.send(result); 
+});
+
+/*
+---------------------
+ELIMINAR CARRITO
+---------------------
+*/
+
+app.delete('/eliminarCarrito', async (req,res) => {
+  const { id_carrito } = req.body;
+
+  const result = await eliminarCarrito(id_carrito);
+
+  res.send(result); 
+});
+
+/*
+---------------------
+VER EL CARRITO
+---------------------
+*/
+
+app.get('/devolverProductosCarrito', async (req,res) => {
+  const { id_carrito } = req.body;
+
+  const contenido = await devolverProductosCarrito(id_carrito);
+
+  res.send(contenido); 
+});
+
+/*
+---------------------
 AGREGAR AL CARRITO
 ---------------------
 */
 
 app.post('/agregarCarrito', async (req,res) => {
-  const {id_cliente, id_producto, cantidad, id_tipo_cliente} = req.body;
+  const {id_carrito, id_producto, cantidad, id_tipo_cliente} = req.body;
 
-  id_carrito = await devolverCarrito(id_cliente);
 
   agregar = await agregarCarrito(id_carrito,id_producto,cantidad,id_tipo_cliente);
 
@@ -202,10 +264,14 @@ app.post('/agregarCarrito', async (req,res) => {
   }
 });
 
-app.delete('/rebajarCarrito', async (req,res) => {
-  const {id_cliente, id_producto, cantidad} = req.body;
+/*
+---------------------
+QUITAR DEL CARRITO
+---------------------
+*/
 
-  id_carrito = await devolverCarrito(id_cliente);
+app.delete('/rebajarCarrito', async (req,res) => {
+  const {id_carrito, id_producto, cantidad} = req.body;
 
   rebaja = await rebajarCarrito(id_carrito, id_producto,cantidad);
 

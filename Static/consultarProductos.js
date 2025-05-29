@@ -11,7 +11,7 @@ async function consultarProductos() {
             ON p.id_producto = i.id_producto
             GROUP BY p.id_producto, p.nombre, p.descripcion, p.precio_cliente,p.precio_empresa`
         );
-        return productos;
+        return productos.rows;
     } catch (e) {
         return e;
     }

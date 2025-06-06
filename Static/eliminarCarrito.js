@@ -6,6 +6,8 @@ async function eliminarCarrito(id_carrito) {
     try {
       db = await getConnection();
 
+      await db.execute(`DELETE FROM carrito_item WHERE id_carrito = :id_carrito`, { id_carrito });
+
       let result  = await db.execute(
         `DELETE FROM carrito
         WHERE id_carrito = :id_carrito`,

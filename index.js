@@ -10,6 +10,9 @@ const rebajarCarrito = require("./Static/rebajarCarrito.js");
 const mostrarCarritos = require("./Static/mostrarCarritos.js");
 const crearCarrito = require("./Static/crearCarrito.js");
 const eliminarCarrito = require("./Static/eliminarCarrito.js");
+const generarPedido = require("./Static/generarPedido.js");
+const seleccionarSucursal = require("./Static/seleccionarSucursal.js");
+const ingresarDireccion = require("./Static/ingresarDireccion.js");
 require('dotenv').config();
 
 const app = express();
@@ -281,6 +284,29 @@ app.delete('/rebajarCarrito', async (req,res) => {
     res.status(404).json({success:false, mensaje:'Algo salió mal'})
   }
 });
+
+app.post('/generarPedido', async (req,res) => {
+  const {id_carrito} = req.body;
+
+  pedido = await generarPedido(id_carrito);
+  if (pedido) {
+    res.status(200).json({success:true,mensaje:'Pedido realizado con exito'});
+  } else {
+    res.status(404).json({success:false, mensaje:'Algo salió mal'})
+  }
+});
+
+app.post('/ingresarDireccion', async (req,res) => {
+  const {id_pedido,direccion} = req.body;
+
+  despacho = await ingresarDireccion(id_pedido,direccion);
+  if (despacho) {
+    res.status(200).json({success:true,mensaje:'Dirección del pedido ingresada exitosamente'});
+  } else {
+    res.status(404).json({success:false, mensaje:'Algo salió mal'})
+  }
+});
+
 
 app.listen(3000, `${process.env.IP}`, () => {
   console.log('Servidor accesible desde red local en el puerto 3000');

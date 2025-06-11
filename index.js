@@ -13,10 +13,17 @@ const eliminarCarrito = require("./Static/eliminarCarrito.js");
 const generarPedido = require("./Static/generarPedido.js");
 const seleccionarSucursal = require("./Static/seleccionarSucursal.js");
 const ingresarDireccion = require("./Static/ingresarDireccion.js");
+const crearUsuarioCliente = require("./Static/crearUsuario.js");
 require('dotenv').config();
+const cors = require('cors');
+const buscarUsuario = require("./Static/buscarUsuario.js");
+const jwt = require('jsonwebtoken')
+const SECRET = process.env.JWT_SECRET;
+
 
 const app = express();
 
+app.use(cors());
 app.use(express.json());
 
 
@@ -307,6 +314,32 @@ app.post('/ingresarDireccion', async (req,res) => {
   }
 });
 
+app.post('/crearUsuario', async (req,res) => {
+  const {   email,
+            contrasena,
+            nombre,
+            rut,
+            telefono,
+            direccion,
+            id_tipo_cliente, } = req.body;
+
+  const result = await crearUsuarioCliente(email,contrasena,1,nombre,rut,telefono,direccion,id_tipo_cliente);
+  console.log(result);
+  res.send(result); 
+});
+
+app.post('/buscarUsuario',async (req,res) => {
+  const { email, contrasena } = req.body;
+
+  result = await buscarUsuario(email,contrasena);
+
+  if (result.success) {
+    const token = jwt.sign({ email: email, id: result.id_usuario }, SECRET, { expiresIn: '1h' });
+    res.json({ token });
+  } else {
+    res.status(404).json({success:result.success, mensaje:'Credenciales no encontradas'});
+  }
+});
 
 app.listen(3000, `${process.env.IP}`, () => {
   console.log('Servidor accesible desde red local en el puerto 3000');

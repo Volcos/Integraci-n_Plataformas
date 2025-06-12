@@ -12,14 +12,24 @@ async function buscarUsuario(email,contrasena) {
                 contrasena
             }
         );
-        console.log(user.rows.length);
+        const tipo_cliente = await db.execute(
+            `
+            SELECT id_tipo_cliente,id_cliente FROM cliente WHERE id_usuario = :id_usuario
+            `,
+            {
+                id_usuario:user.rows[0][0],
+            }
+        );
+        console.log(user.rows[0][0]);
+        console.log(tipo_cliente.rows);
         if (user.rows.length == 1){
             
-            return {success: true, id_usuario: user.rows[0].id_usuario};
+            return {success: true, id_usuario: user.rows[0][0], id_tipo_cliente:tipo_cliente.rows[0][0], id_cliente:tipo_cliente.rows[0][1]};
         } else {
             return {success:false};
         }
     } catch (e) {
+        console.log(e);
         return e;
     }
 }

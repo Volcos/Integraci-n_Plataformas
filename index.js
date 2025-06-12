@@ -17,8 +17,11 @@ const crearUsuarioCliente = require("./Static/crearUsuario.js");
 require('dotenv').config();
 const cors = require('cors');
 const buscarUsuario = require("./Static/buscarUsuario.js");
-const jwt = require('jsonwebtoken')
+const jwt = require('jsonwebtoken');
+const borrarDelCarrito = require("./Static/borrarDelCarrito.js");
 const SECRET = process.env.JWT_SECRET;
+const { WebpayPlus, Options, IntegrationApiKeys, Environment } = require('transbank-sdk');
+const { obtenerPedidoPorToken, obtenerDireccionPorPedido, obtenerProductosPorPedido, obtenerTotalPedido } = require('./Static/pedidos.js');
 
 
 const app = express();
@@ -26,7 +29,13 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-
+const webpayTransaction = new WebpayPlus.Transaction(
+  new Options(
+    '597055555532', 
+    '597055555532', 
+    Environment.Integration
+  )
+);
 
 /*
 RUTAS
@@ -133,6 +142,41 @@ app.get('/devolverStock', async (req,res) => {
   };
 });
 
+app.get('/inventario', async (req, res) => {
+  try {
+    const db = await getConnection();
+    const result = await db.execute(`
+      SELECT  i.id_producto, 
+              p.nombre, 
+              p.stock_minimo,
+              s.id_sucursal AS id_sucursal, 
+              i.cantidad
+      FROM inventario i
+      JOIN producto p ON i.id_producto = p.id_producto
+      JOIN sucursal s ON i.id_sucursal = s.id_sucursal
+      ORDER BY i.id_producto
+    `);
+
+    const productos = {};
+    result.rows.forEach(row => {
+      const [id, nombre, minStock, sucursal, cantidad] = row;
+      if (!productos[id]) {
+        productos[id] = {
+          id,
+          name: nombre,
+          minStock,
+          stockByBranch: {}
+        };
+      }
+      productos[id].stockByBranch[sucursal] = cantidad;
+    });
+
+    res.json(Object.values(productos));
+  } catch (e) {
+    res.status(500).send('Error al obtener inventario: ' + e.message);
+  }
+});
+
 /*
 ---------------------
 CONSULTAR TODOS LOS PRODUCTOS
@@ -199,7 +243,7 @@ MOSTRAR CARRITOS
 */
 
 app.get('/mostrarCarritos', async (req,res) => {
-  const {id_cliente} = req.body;
+  const {id_cliente} = req.query;
 
   carrito = await mostrarCarritos(id_cliente);
 
@@ -245,7 +289,7 @@ VER EL CARRITO
 */
 
 app.get('/devolverProductosCarrito', async (req,res) => {
-  const { id_carrito } = req.body;
+  const { id_carrito } = req.query;
 
   const contenido = await devolverProductosCarrito(id_carrito);
 
@@ -292,12 +336,24 @@ app.delete('/rebajarCarrito', async (req,res) => {
   }
 });
 
+app.delete('/borrarDelCarrito', async (req,res) => {
+  const {id_carrito, id_producto} = req.body;
+
+  result = await borrarDelCarrito(id_carrito,id_producto);
+
+  if (result) {
+    res.status(200).json({success:true,mensaje:'Producto eliminado con exito'});
+  } else {
+    res.status(404).json({success:false, mensaje:'Algo salió mal'})
+  }
+});
+
 app.post('/generarPedido', async (req,res) => {
   const {id_carrito} = req.body;
 
   pedido = await generarPedido(id_carrito);
-  if (pedido) {
-    res.status(200).json({success:true,mensaje:'Pedido realizado con exito'});
+  if (pedido.success) {
+    res.status(200).json({success:true,mensaje:'Pedido realizado con exito',id_pedido:pedido.id_pedido});
   } else {
     res.status(404).json({success:false, mensaje:'Algo salió mal'})
   }
@@ -332,14 +388,94 @@ app.post('/buscarUsuario',async (req,res) => {
   const { email, contrasena } = req.body;
 
   result = await buscarUsuario(email,contrasena);
-
+  
   if (result.success) {
-    const token = jwt.sign({ email: email, id: result.id_usuario }, SECRET, { expiresIn: '1h' });
+    const token = jwt.sign({ email: email, id: result.id_usuario, id_tipo_cliente:result.id_tipo_cliente, id_cliente: result.id_cliente }, SECRET, { expiresIn: '1h' });
     res.json({ token });
   } else {
-    res.status(404).json({success:result.success, mensaje:'Credenciales no encontradas'});
+    res.status(404).json({success:result.success, mensaje:result.e});
   }
 });
+
+
+app.post('/pagar', async (req, res) => {
+  try {
+    const { id_compra, id_usuario, monto_total } = req.body;
+
+    const tx = new WebpayPlus.Transaction(
+      new Options(
+        '597055555532', 
+        IntegrationApiKeys.WEBPAY, 
+        Environment.Integration
+      )
+    );
+    const returnUrl = 'http://localhost:5173/retorno-webpay';
+
+    const response = await tx.create(
+      String(id_compra),
+      String(id_usuario),
+      monto_total,
+      returnUrl
+    );
+
+    const { token, url } = response;
+
+    const htmlForm = `
+      <html>
+        <body onload="document.forms[0].submit()">
+          <form action="${url}" method="POST">
+            <input type="hidden" name="token_ws" value="${token}" />
+            <noscript>
+              <input type="submit" value="Ir a pagar con Webpay" />
+            </noscript>
+          </form>
+        </body>
+      </html>
+    `;
+
+    res.send(htmlForm);
+  } catch (error) {
+    console.error('Error en /pagar:', error);
+    res.status(500).json({ success: false, message: 'Error al crear la transacción', error: error.message });
+  }
+});
+
+app.post('/retorno-webpay', express.urlencoded({ extended: false }),async (req, res) => {
+  const token = req.body.token_ws;
+
+  res.redirect(`http://localhost:5173/paymentSuccess?token=${token}`);
+
+});
+
+app.get('/pedido-exito', async (req, res) => {
+  const { token } = req.query;
+
+  let db = await getConnection();
+
+  try {
+    console.log('Token recibido en /pedido-exito:', token);
+
+    await db.commit();
+
+    //const idPedido = await obtenerPedidoPorToken(token);
+    //console.log('ID del pedido:', idPedido);
+
+    const direccion = await obtenerDireccionPorPedido(idPedido);
+    console.log('Dirección:', direccion);
+
+    const productos = await obtenerProductosPorPedido(idPedido);
+    console.log('Productos:', productos);
+
+    const total = await obtenerTotalPedido(idPedido);
+    console.log('Total:', total);
+
+    res.json({ id_pedido: idPedido, direccion, productos, total });
+  } catch (e) {
+    console.error('Error al obtener pedido:', e); // <-- imprime el error exacto
+    res.status(500).json({ error: 'No se pudo obtener el pedido', detalle: e.message });
+  }
+});
+
 
 app.listen(3000, `${process.env.IP}`, () => {
   console.log('Servidor accesible desde red local en el puerto 3000');

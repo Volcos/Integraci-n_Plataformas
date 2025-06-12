@@ -36,7 +36,7 @@ async function agregarCarrito(id_carrito,id_producto,cantidad,id_tipo_cliente) {
             { outFormat: OracleDB.OUT_FORMAT_OBJECT }
             );
 
-            precio_unitario = precio.rows[0].PRECIO_CLIENTE;
+            precio_unitario = precio.rows[0].PRECIO_EMPRESA;
         }
       
         await db.execute(

@@ -15,8 +15,8 @@ async function generarPedido(id_carrito) {
             {
                 id_carrito,
                 id_pedido: { dir: OracleDB.BIND_OUT, type: OracleDB.NUMBER }   
-            },
-            { autoCommit:true }
+            }
+            
       );
       console.log(result.outBinds.id_pedido[0]);
       for (const producto in productos) {
@@ -29,15 +29,14 @@ async function generarPedido(id_carrito) {
                 nombre: productos[producto].NOMBRE,
                 precio_unitario: productos[producto].PRECIO_UNITARIO,
                 cantidad: productos[producto].CANTIDAD
-            },
-            { autoCommit:true }
+            }
         );
         await seleccionarSucursal(productos[producto].ID_PRODUCTO,productos[producto].CANTIDAD);
       }
 
       
 
-      return true;
+      return {success:true,id_pedido:result.outBinds.id_pedido[0]};
     } catch (e) {
       console.log(e)  
       return false;

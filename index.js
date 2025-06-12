@@ -352,6 +352,8 @@ app.post('/generarPedido', async (req,res) => {
   const {id_carrito} = req.body;
 
   pedido = await generarPedido(id_carrito);
+
+  console.log(pedido)
   if (pedido.success) {
     res.status(200).json({success:true,mensaje:'Pedido realizado con exito',id_pedido:pedido.id_pedido});
   } else {
@@ -363,10 +365,10 @@ app.post('/ingresarDireccion', async (req,res) => {
   const {id_pedido,direccion} = req.body;
 
   despacho = await ingresarDireccion(id_pedido,direccion);
-  if (despacho) {
+  if (despacho.success) {
     res.status(200).json({success:true,mensaje:'Dirección del pedido ingresada exitosamente'});
   } else {
-    res.status(404).json({success:false, mensaje:'Algo salió mal'})
+    res.status(404).json({success:false, mensaje:despacho.error});
   }
 });
 
@@ -445,35 +447,6 @@ app.post('/retorno-webpay', express.urlencoded({ extended: false }),async (req, 
 
   res.redirect(`http://localhost:5173/paymentSuccess?token=${token}`);
 
-});
-
-app.get('/pedido-exito', async (req, res) => {
-  const { token } = req.query;
-
-  let db = await getConnection();
-
-  try {
-    console.log('Token recibido en /pedido-exito:', token);
-
-    await db.commit();
-
-    //const idPedido = await obtenerPedidoPorToken(token);
-    //console.log('ID del pedido:', idPedido);
-
-    const direccion = await obtenerDireccionPorPedido(idPedido);
-    console.log('Dirección:', direccion);
-
-    const productos = await obtenerProductosPorPedido(idPedido);
-    console.log('Productos:', productos);
-
-    const total = await obtenerTotalPedido(idPedido);
-    console.log('Total:', total);
-
-    res.json({ id_pedido: idPedido, direccion, productos, total });
-  } catch (e) {
-    console.error('Error al obtener pedido:', e); // <-- imprime el error exacto
-    res.status(500).json({ error: 'No se pudo obtener el pedido', detalle: e.message });
-  }
 });
 
 

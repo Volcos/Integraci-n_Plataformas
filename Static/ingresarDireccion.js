@@ -9,16 +9,17 @@ async function ingresarDireccion(id_pedido,direccion) {
       let result  = await db.execute(
         `INSERT INTO DESPACHO (DIRECCION,ID_PEDIDO) VALUES (:direccion,:id_pedido)`,
         { 
-            direccion,
-            id_pedido
+            direccion:direccion,
+            id_pedido:id_pedido
         }
       );
 
       await db.commit();
 
-      return true;
+      return {success:true};
     } catch (e) {
-      return false;
+      console.log(e);
+      return {success:false, error:e};
     }
     
 }

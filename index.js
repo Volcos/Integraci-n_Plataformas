@@ -388,8 +388,9 @@ app.post('/crearUsuario', async (req,res) => {
 
 app.post('/buscarUsuario',async (req,res) => {
   const { email, contrasena } = req.body;
-
-  result = await buscarUsuario(email,contrasena);
+  console.log(email)
+  console.log(contrasena)
+  result = await buscarUsuario(`${email}`,`${contrasena}`);
   
   if (result.success) {
     const token = jwt.sign({ email: email, id: result.id_usuario, id_tipo_cliente:result.id_tipo_cliente, id_cliente: result.id_cliente }, SECRET, { expiresIn: '1h' });

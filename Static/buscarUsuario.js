@@ -3,7 +3,6 @@ async function buscarUsuario(email,contrasena) {
     let db;
     try {
         db = await getConnection();
-        const id_usuario = '';
         const user = await db.execute(
             `
             SELECT ID_USUARIO,EMAIL,CONTRASENA FROM USUARIO WHERE EMAIL = :email AND CONTRASENA = :contrasena
@@ -21,7 +20,7 @@ async function buscarUsuario(email,contrasena) {
                 id_usuario:user.rows[0][0],
             }
         );
-        console.log(id_usuario);
+        console.log(user.rows[0][0])
         console.log(tipo_cliente.rows);
         if (user.rows.length == 1){
             

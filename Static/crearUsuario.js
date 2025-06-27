@@ -25,7 +25,10 @@ async function crearUsuarioCliente(
         },
         { autoCommit:true }
       );
-      console.log(result.outBinds.id_usuario[0]);
+      
+
+      console.log(id_tipo_cliente);
+
       await db.execute(
         `INSERT INTO CLIENTE (NOMBRE,RUT,TELEFONO,EMAIL,DIRECCION,ID_TIPO_CLIENTE,ID_USUARIO) VALUES (:nombre,:rut,:telefono,:email,:direccion,:id_tipo_cliente,:id_usuario)`,
         { 

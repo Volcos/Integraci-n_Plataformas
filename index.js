@@ -142,6 +142,12 @@ app.get('/devolverStock', async (req,res) => {
   };
 });
 
+/*
+---------------------
+CONSULTAR INVENTARIO
+---------------------
+*/ 
+
 app.get('/inventario', async (req, res) => {
   try {
     const db = await getConnection();
@@ -335,7 +341,11 @@ app.delete('/rebajarCarrito', async (req,res) => {
     res.status(404).json({success:false, mensaje:'Algo salió mal'})
   }
 });
-
+/*
+---------------------
+BORRAR DEL CARRITO
+---------------------
+*/
 app.delete('/borrarDelCarrito', async (req,res) => {
   const {id_carrito, id_producto} = req.body;
 
@@ -347,6 +357,12 @@ app.delete('/borrarDelCarrito', async (req,res) => {
     res.status(404).json({success:false, mensaje:'Algo salió mal'})
   }
 });
+
+/*
+---------------------
+GENERAR PEDIDO
+---------------------
+*/
 
 app.post('/generarPedido', async (req,res) => {
   const {id_carrito} = req.body;
@@ -361,6 +377,12 @@ app.post('/generarPedido', async (req,res) => {
   }
 });
 
+/*
+---------------------
+INGRESAR DIRECCION
+---------------------
+*/
+
 app.post('/ingresarDireccion', async (req,res) => {
   const {id_pedido,direccion} = req.body;
 
@@ -372,6 +394,12 @@ app.post('/ingresarDireccion', async (req,res) => {
   }
 });
 
+/*
+---------------------
+CREAR USUARIO
+---------------------
+*/
+
 app.post('/crearUsuario', async (req,res) => {
   const {   email,
             contrasena,
@@ -380,11 +408,17 @@ app.post('/crearUsuario', async (req,res) => {
             telefono,
             direccion,
             id_tipo_cliente, } = req.body;
-
+  console.log(id_tipo_cliente);
   const result = await crearUsuarioCliente(email,contrasena,1,nombre,rut,telefono,direccion,id_tipo_cliente);
   console.log(result);
   res.send(result); 
 });
+
+/*
+---------------------
+BUSCAR USUARIO
+---------------------
+*/
 
 app.post('/buscarUsuario',async (req,res) => {
   const { email, contrasena } = req.body;
@@ -400,7 +434,11 @@ app.post('/buscarUsuario',async (req,res) => {
   }
 });
 
-
+/*
+---------------------
+REALIZAR PAGO
+---------------------
+*/
 app.post('/pagar', async (req, res) => {
   try {
     const { id_compra, id_usuario, monto_total } = req.body;
@@ -442,6 +480,12 @@ app.post('/pagar', async (req, res) => {
     res.status(500).json({ success: false, message: 'Error al crear la transacción', error: error.message });
   }
 });
+
+/*
+---------------------
+RESPUESTA WEBPAY
+---------------------
+*/
 
 app.post('/retorno-webpay', express.urlencoded({ extended: false }),async (req, res) => {
   const token = req.body.token_ws;

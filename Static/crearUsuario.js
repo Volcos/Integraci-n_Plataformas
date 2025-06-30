@@ -22,8 +22,7 @@ async function crearUsuarioCliente(
             contrasena,
             id_tipo_usuario,
             id_usuario: { dir: OracleDB.BIND_OUT, type: OracleDB.NUMBER } 
-        },
-        { autoCommit:true }
+        }
       );
       
 
@@ -39,8 +38,7 @@ async function crearUsuarioCliente(
             direccion,
             id_tipo_cliente,
             id_usuario: result.outBinds.id_usuario[0] 
-        },
-        { autoCommit:true }
+        }
       );
 
 

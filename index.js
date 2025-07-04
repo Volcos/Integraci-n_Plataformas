@@ -22,6 +22,7 @@ const borrarDelCarrito = require("./Static/borrarDelCarrito.js");
 const SECRET = process.env.JWT_SECRET;
 const { WebpayPlus, Options, IntegrationApiKeys, Environment } = require('transbank-sdk');
 const { obtenerPedidoPorToken, obtenerDireccionPorPedido, obtenerProductosPorPedido, obtenerTotalPedido } = require('./Static/pedidos.js');
+const { autoCommit } = require("oracledb");
 
 
 const app = express();
@@ -494,6 +495,32 @@ app.post('/retorno-webpay', express.urlencoded({ extended: false }),async (req, 
 
 });
 
+app.put('/setCantidad', async (req,res)  => {
+  const { id_carrito, id_producto, cantidad } = req.body;
+  console.log("request: "+req.body.id_carrito)
+  console.log(id_carrito);
+  console.log(id_producto);
+  console.log(cantidad);
+  try {
+    db = await getConnection();
+    await db.execute(`
+         UPDATE CARRITO_ITEM 
+         SET CANTIDAD = :cantidad 
+         WHERE ID_CARRITO = :id_carrito AND ID_PRODUCTO = :id_producto`,
+        {
+          cantidad,
+          id_carrito,
+          id_producto
+         }
+        ) 
+    await db.commit();
+    res.status(200).json({success:true,message:'Cantidad actualizada con exito'})
+  } catch (e){
+    console.log(e)
+    res.status(400).json({success:false,message:e})
+  }
+
+})
 
 app.listen(3000, `${process.env.IP}`, () => {
   console.log('Servidor accesible desde red local en el puerto 3000');

@@ -23,6 +23,7 @@ const SECRET = process.env.JWT_SECRET;
 const { WebpayPlus, Options, IntegrationApiKeys, Environment } = require('transbank-sdk');
 const { obtenerPedidoPorToken, obtenerDireccionPorPedido, obtenerProductosPorPedido, obtenerTotalPedido } = require('./Static/pedidos.js');
 const { autoCommit } = require("oracledb");
+const webpayTransaction = require("./Static/transbank.js");
 
 
 const app = express();
@@ -30,13 +31,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const webpayTransaction = new WebpayPlus.Transaction(
-  new Options(
-    '597055555532', 
-    '597055555532', 
-    Environment.Integration
-  )
-);
+
+
 
 /*
 RUTAS
@@ -285,7 +281,7 @@ app.delete('/eliminarCarrito', async (req,res) => {
   const { id_carrito } = req.body;
 
   const result = await eliminarCarrito(id_carrito);
-
+  console.log(result);
   res.send(result); 
 });
 
@@ -444,16 +440,10 @@ app.post('/pagar', async (req, res) => {
   try {
     const { id_compra, id_usuario, monto_total } = req.body;
 
-    const tx = new WebpayPlus.Transaction(
-      new Options(
-        '597055555532', 
-        IntegrationApiKeys.WEBPAY, 
-        Environment.Integration
-      )
-    );
+
     const returnUrl = 'http://localhost:5173/retorno-webpay';
 
-    const response = await tx.create(
+    const response = await webpayTransaction.create(
       String(id_compra),
       String(id_usuario),
       monto_total,
@@ -491,9 +481,101 @@ RESPUESTA WEBPAY
 app.post('/retorno-webpay', express.urlencoded({ extended: false }),async (req, res) => {
   const token = req.body.token_ws;
 
-  res.redirect(`http://localhost:5173/paymentSuccess?token=${token}`);
+  try {
+    const result = await webpayTransaction.commit(token);
 
+    if (result.response_code === 0) {
+      const info = {
+        order: result.buy_order,
+        session: result.session_id,
+        amount: result.amount,
+        cardDetail: result.card_detail,
+        authorizationCode: result.authorization_code,
+        paymentType: result.payment_type_code,
+        installments: result.installments_number,
+      };
+
+      console.log('Pago exitoso:', info);
+
+      res.json(
+          {
+            success:true,
+            token_ws:token,
+            result:info
+          }
+      );
+    } else {
+      res.send(
+          {
+            success:false,
+          }
+        );
+    }
+  } catch (error) {
+    console.error('Error al obtener resultado de transacción:', error);
+    res.status(500).send('Error en la confirmación del pago.');
+  }
 });
+
+/*
+---------------------
+ESTADO DE LA COMPRA Y CONSULTA DE DATOS
+---------------------
+*/ 
+
+app.get('/pedido-exito', async (req, res) => {
+  const { token } = req.query; // token = id_pedido
+  const db = await getConnection();
+
+  try {
+    const pedidoId = parseInt(token);
+
+    const direccionResult = await db.execute(`
+      SELECT DIRECCION
+      FROM DESPACHO
+      WHERE ID_PEDIDO = :id
+    `, [pedidoId]);
+
+    const direccion = direccionResult.rows[0]?.[0] || 'Sin dirección registrada';
+
+    const productosResult = await db.execute(`
+      SELECT NOMBRE, PRECIO_UNITARIO, CANTIDAD
+      FROM DETALLE_PEDIDO
+      WHERE ID_PEDIDO = :id
+    `, [pedidoId]);
+
+    const productos = productosResult.rows.map(row => ({
+      name: row[0],
+      price: row[1],
+      quantity: row[2]
+    }));
+
+    const totalResult = await db.execute(`
+      SELECT MONTO_TOTAL
+      FROM RECIBO
+      WHERE ID_PEDIDO = :id
+    `, [pedidoId]);
+
+    const total = totalResult.rows[0]?.[0] || 0;
+
+    res.json({
+      id_pedido: pedidoId,
+      direccion,
+      productos,
+      total
+    });
+
+  } catch (e) {
+    console.error('Error en /pedido-exito:', e);
+    res.status(500).send('Error al recuperar datos del pedido');
+  }
+});
+
+/*
+---------------------
+ESTABLECER UN STOCK FIJO PARA LOS PRODUCTOS DEL CARRITO
+---------------------
+*/ 
 
 app.put('/setCantidad', async (req,res)  => {
   const { id_carrito, id_producto, cantidad } = req.body;
@@ -517,7 +599,7 @@ app.put('/setCantidad', async (req,res)  => {
     res.status(200).json({success:true,message:'Cantidad actualizada con exito'})
   } catch (e){
     console.log(e)
-    res.status(400).json({success:false,message:e})
+    return res.status(400).json({success:false,message:e})
   }
 
 })
@@ -526,5 +608,5 @@ app.listen(3000, `${process.env.IP}`, () => {
   console.log('Servidor accesible desde red local en el puerto 3000');
 });
 
-console.log(`El servidor esta en linéa en el puerto ${3000}`)
+console.log(`El servidor esta en linéa en el< puerto ${3000}`)
 
